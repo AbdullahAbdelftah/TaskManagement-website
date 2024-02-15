@@ -50,7 +50,7 @@ const Tasks = () => {
         setCurr(newObj);
         store.updateCurrUser(newObj);
         console.log(newObj,"look here");
-        fetch("http://localhost:5000/addtask",{
+        fetch("https://taskserver-iy1n.onrender.com/addtask",{
             method: "POST",
             headers:{
                 "content-type": "application/json",
@@ -73,7 +73,7 @@ const Tasks = () => {
 
     return ( 
     <div className="alltaskdiv">
-        <div class="search">
+        <div className="search">
             <input ref={taskRef} maxLength={50} placeholder="Add Task..." type="text"/>
             <button type="Submit" onClick={addTask} >ADD</button>
         </div>

@@ -7,10 +7,14 @@ const Ai = () => {
     let selectFromRef=useRef(null);
     let selectToRef=useRef(null);
     let store=useContext(Store);
-    let timeFromRef=useRef(null);
-    let timeToRef=useRef(null);
+    let timeFromRef=useRef("");
+    let timeToRef=useRef("");
     let [schedule,setSchedule]=useState([]);
     async function ai(){
+        if(store.currUser.tasks.length<=0 || timeFromRef.current.value==="" || timeToRef.current.value===""){
+            return
+        }
+        setSchedule([])
         setLoading(true);
         await AiCall();
     }
@@ -18,7 +22,7 @@ const Ai = () => {
         let res;
         let query=getText();
         console.log(query);
-        fetch(`http://localhost:5000/gpt/${query}`).then((response) =>{
+        fetch(`https://taskserver-iy1n.onrender.com/gpt/${query}`).then((response) =>{
             return response.json();
         }).then((data)=>{
             console.log(data.res);

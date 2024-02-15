@@ -3,7 +3,7 @@ import { Store } from "../Store";
 const TaskCard = (props) => {
     let store=useContext(Store);
     function sendOngoing(){
-        fetch(`http://localhost:5000/sendOngoing/${props.id}/${store.currUser.username}`).then((response)=>{
+        fetch(`https://taskserver-iy1n.onrender.com/sendOngoing/${props.id}/${store.currUser._id}`).then((response)=>{
             if(!response.ok){
                 throw new Error(response);
             }
@@ -13,10 +13,12 @@ const TaskCard = (props) => {
         }).then((data)=>{
             console.log(data);
             store.updateCurrUser(data);
+        }).catch((err)=>{
+            console.log(err);
         })
     }
     function removeTask(){
-        fetch(`http://localhost:5000/removeTask/${props.id}/${store.currUser.username}`).then((response)=>{
+        fetch(`https://taskserver-iy1n.onrender.com/removeTask/${props.id}/${store.currUser._id}`).then((response)=>{
             if(!response.ok){
                 throw new Error(response);
             }

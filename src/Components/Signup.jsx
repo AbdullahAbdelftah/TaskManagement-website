@@ -21,7 +21,7 @@ const Signup = () => {
             password:signPass.current.value,
             uniId:0
         };
-        fetch("http://localhost:5000/addUser",{
+        fetch("https://taskserver-iy1n.onrender.com/addUser",{
             method: "POST",
             headers:{
                 "content-type": "application/json",
@@ -37,16 +37,17 @@ const Signup = () => {
             }
         }).then((data)=>{
             if(data===null){
-                setDup("h")
+                setDup("h");
+                return
             }
             console.log(data,"hi");
-            store.updateCurrUser(newUser);
-            localStorage.setItem("currUser",JSON.stringify(newUser));
+            store.updateCurrUser(data);
+            localStorage.setItem("currUser",JSON.stringify(data));
         })
     }
     function logIn(){
         setWrong("");
-        fetch(`http://localhost:5000/login/${logUsername.current.value}/${logPass.current.value}`).then((response)=>{
+        fetch(`https://taskserver-iy1n.onrender.com/login/${logUsername.current.value}/${logPass.current.value}`).then((response)=>{
             return response.json();
         }).then((data)=>{
             if(data!==null){

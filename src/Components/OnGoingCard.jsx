@@ -4,7 +4,7 @@ import { Store } from "../Store";
 const OnGoingCard = (props) => {
     let store=useContext(Store);
     function removeOngoing(){
-        fetch(`http://localhost:5000/removeOngoing/${props.id}/${store.currUser.username}`).then((response)=>{
+        fetch(`https://taskserver-iy1n.onrender.com/removeOngoing/${props.id}/${store.currUser._id}`).then((response)=>{
             if(!response.ok){
                 throw new Error(response);
             }
@@ -18,7 +18,7 @@ const OnGoingCard = (props) => {
     }
 
     function sendDone(){
-        fetch(`http://localhost:5000/sendDone/${props.id}/${store.currUser.username}`).then((response)=>{
+        fetch(`http://localhost:5000/sendDone/${props.id}/${store.currUser._id}`).then((response)=>{
             if(!response.ok){
                 throw new Error(response);
             }

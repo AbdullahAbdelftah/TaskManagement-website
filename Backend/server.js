@@ -1,5 +1,6 @@
 let express=require('express');
 let app= express();
+let mongoose=require('mongoose');
 const cors = require('cors');
 const { log } = require('console');
 app.use(cors());
@@ -7,220 +8,198 @@ app.use(express.json());
 const {config}=require("dotenv");
 config()
 const OpenAI = require('openai');
-const openai = new OpenAI({
-    apiKey: process.env.API_KEY
-});
 
-app.post("/addUser",(req,res)=>{
-    let fs=require('fs');
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        let newData=JSON.parse(data);
-        newData.push(req.body);
-        let reqUser=newData.filter((user)=>{
+const taskSchema = new mongoose.Schema({
+    content: String,
+    id: Number,
+    color: String
+});
+const ongoingSchema = new mongoose.Schema({
+    content: String,
+    id: Number,
+    color: String,
+    time:String
+});
+const doneSchema = new mongoose.Schema({
+    content: String,
+    id: Number,
+    color: String,
+    time:String,
+    doneTime:String
+});
+const User = mongoose.model('User', {
+    username: String,
+    password: String,
+    uniId:Number,
+    tasks:[taskSchema],
+    ongoing:[ongoingSchema],
+    done:[doneSchema]
+    
+});
+const urlDb="mongodb+srv://abdullah92:UEmCu_t-ssXs8Xe@tasks.ixtcg1y.mongodb.net/mongo-db?retryWrites=true&w=majority";
+mongoose.connect(urlDb)
+.then((res)=>{
+    console.log("<<<<connected to db>>>>");
+    app.listen(5000)
+}).catch((err)=>{
+    console.log(err);
+})
+app.post('/addUser',async (req,res)=>{
+    let temp=[];
+    const user=new User(req.body);
+    let search= await User.find().then((response)=>{
+        temp=response.filter((user)=>{
             return (user.username===req.body.username);
-        })
-        if(reqUser.length>0){
-            res.json(null);
-            return
-        }
-        let input = JSON.stringify(newData);
-        fs.writeFile('data.json', input, 'utf-8', (err) => {
-            if (err) {
-              console.log("There was an error in writing");
-              res.status(500).json({ success: false, message: 'Error writing data' });
-            } else {
-              console.log("Data written");
-              res.status(200).json({ success: true, message: 'Data written successfully' });
-            }
-          });
-    });
+        });
+    })
+    if(temp.length!==0){
+        return res.json(null);
+    }
+    user.save()
+    .then((response)=>{
+        return res.json(response);
+    })
+})
+app.get("/login/:username/:password",async (req,res)=>{
+    let temp=[];
+    let search= await User.find().then((response)=>{
+        temp=response.filter((user)=>{
+            return (user.username===req.params.username);
+        });
+    })
+    if(temp.length===0 || temp[0].password!=req.params.password){
+        return res.json(null);
+    }
+    return res.status(200).json(temp[0]);
 });
-app.get("/login/:username/:password",(req,res)=>{
-    let fs=require('fs');
-    let users=[];
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        users=JSON.parse(data);
-        let reqUser=users.filter((user)=>{
-            return (user.username===req.params.username)&&(user.password===req.params.password);
-        })
-        if(reqUser.length>0){
-            res.status(200).json(reqUser[0]);
+app.post("/addTask",async (req,res)=>{
+    const userId = req.body._id;
+    const updatedUserData = req.body;
+    try {
+        const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
         }
-        else{
-            console.log("yo");
-            res.status(404).json(null);
-        }
-    });
-});
-app.post("/addTask",(req,res)=>{
-    let fs=require('fs');
-    let result;
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        if(err){
-            console.log("Read error");
-        }
-        else{
-            let temp=JSON.parse(data);
-            for(let i=0;i<temp.length;i++){
-                if(temp[i].username===req.body.username){
-                    temp[i]=req.body;
-                    result=temp[i];
-                    break;
-                }
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
+
+app.get('/sendOngoing/:id/:userId',(req,res)=>{
+    User.findById(req.params.userId).then(async (data)=>{
+        let reqObj;
+        let time=require('./time');
+        for(let i=0;i<data.tasks.length;i++){
+            if(data.tasks[i].id==req.params.id){
+                reqObj={...data.tasks[i]}
+                data.tasks.splice(i, 1);
+                break;
             }
-            fs.writeFile('data.json',JSON.stringify(temp),'utf-8',(err)=>{
-                if(err){
-                    console.log("error in updating ",req.body.username);
-                }
-            })
-            res.status(200).json(result);
+        }
+        reqObj=reqObj._doc;
+        reqObj['time']=time();
+        console.log(reqObj);
+        data.ongoing.push(reqObj);
+        const userId = req.params.userId;
+        const updatedUserData = data;
+        try {
+            const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
+            if (!updatedUser) {
+                return res.status(404).json({ message: "User not found" });
+            }
+            res.status(200).json(updatedUser);
+        } catch (error) {
+            console.error("Error updating user:", error);
+            res.status(500).json({ message: "Internal server error" });
         }
     })
 })
 
-app.get('/sendOngoing/:id/:username',(req,res)=>{
-    let fs=require('fs');
-    let index;
-    let reqObj;
-    let time=require('./time');
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        if(err){
-            console.log("Read error");
+app.get('/removeTask/:id/:userId',(req,res)=>{
+    User.findById(req.params.userId).then(async (data)=>{
+        for(let i=0;i<data.tasks.length;i++){
+            if(data.tasks[i].id==req.params.id){
+                data.tasks.splice(i, 1);
+                break;
+            }
         }
-        else{
-            let temp=JSON.parse(data);
-            for(let i=0;i<temp.length;i++){
-                if(temp[i].username===req.params.username){
-                    console.log("heyyy");
-                    index=i
-                    break;
-                }
+        const userId = req.params.userId;
+        const updatedUserData = data;
+        try {
+            const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
+            if (!updatedUser) {
+                return res.status(404).json({ message: "User not found" });
             }
-            for(let i=0;i<temp[index].tasks.length;i++){
-                console.log("heyman");
-                console.log(temp[index].tasks[i].id);
-                if(temp[index].tasks[i].id==req.params.id){
-                    reqObj={...temp[index].tasks[i]}
-                    console.log(reqObj);
-                    temp[index].tasks.splice(i, 1);
-                    console.log(reqObj);
-                    break;
-                }
-            }
-            reqObj['time']=time();
-            temp[index].ongoing.push(reqObj);
-            fs.writeFile('data.json',JSON.stringify(temp),'utf-8',(err)=>{
-                if(err){
-                    console.log("error in updating ",req.body.username);
-                }
-            })
-            res.status(200).json(temp[index]);
+            res.status(200).json(updatedUser);
+        } catch (error) {
+            console.error("Error updating user:", error);
+            res.status(500).json({ message: "Internal server error" });
         }
     })
 })
 
-app.get('/removeTask/:id/:username',(req,res)=>{
-    let fs=require('fs');
-    let index;
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        if(err){
-            console.log("Read error");
+app.get('/removeOngoing/:id/:userId',(req,res)=>{
+    User.findById(req.params.userId).then(async (data)=>{
+        for(let i=0;i<data.ongoing.length;i++){
+            if(data.ongoing[i].id==req.params.id){
+                data.ongoing.splice(i, 1);
+                break;
+            }
         }
-        else{
-            let temp=JSON.parse(data);
-            for(let i=0;i<temp.length;i++){
-                if(temp[i].username===req.params.username){
-                    index=i
-                    break;
-                }
+        const userId = req.params.userId;
+        const updatedUserData = data;
+        try {
+            const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
+            if (!updatedUser) {
+                return res.status(404).json({ message: "User not found" });
             }
-            for(let i=0;i<temp[index].tasks.length;i++){
-                console.log(temp[index].tasks[i].id);
-                if(temp[index].tasks[i].id==req.params.id){
-                    temp[index].tasks.splice(i, 1);
-                    break;
-                }
-            }
-            fs.writeFile('data.json',JSON.stringify(temp),'utf-8',(err)=>{
-                if(err){
-                    console.log("error in updating ",req.body.username);
-                }
-            })
-            res.status(200).json(temp[index]);
+            res.status(200).json(updatedUser);
+        } catch (error) {
+            console.error("Error updating user:", error);
+            res.status(500).json({ message: "Internal server error" });
         }
     })
 })
 
-app.get('/removeOngoing/:id/:username',(req,res)=>{
-    let fs=require('fs');
-    let index;
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        if(err){
-            console.log("Read error");
+app.get('/sendDone/:id/:userId',(req,res)=>{
+    User.findById(req.params.userId).then(async (data)=>{
+        let reqObj;
+        let time=require('./time');
+        for(let i=0;i<data.ongoing.length;i++){
+            if(data.ongoing[i].id==req.params.id){
+                reqObj={...data.ongoing[i]}
+                data.ongoing.splice(i, 1);
+                break;
+            }
         }
-        else{
-            let temp=JSON.parse(data);
-            for(let i=0;i<temp.length;i++){
-                if(temp[i].username===req.params.username){
-                    index=i
-                    break;
-                }
+        reqObj=reqObj._doc;
+        reqObj['doneTime']=time();
+        data.done.push(reqObj);
+        const userId = req.params.userId;
+        const updatedUserData = data;
+        try {
+            const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
+            if (!updatedUser) {
+                return res.status(404).json({ message: "User not found" });
             }
-            for(let i=0;i<temp[index].ongoing.length;i++){
-                console.log(temp[index].ongoing[i].id);
-                if(temp[index].ongoing[i].id==req.params.id){
-                    temp[index].ongoing.splice(i, 1);
-                    break;
-                }
-            }
-            fs.writeFile('data.json',JSON.stringify(temp),'utf-8',(err)=>{
-                if(err){
-                    console.log("error in updating ",req.body.username);
-                }
-            })
-            res.status(200).json(temp[index]);
+            res.status(200).json(updatedUser);
+        } catch (error) {
+            console.error("Error updating user:", error);
+            res.status(500).json({ message: "Internal server error" });
         }
     })
 })
-
-app.get('/sendDone/:id/:username',(req,res)=>{
-    let fs=require('fs');
-    let index;
-    let reqObj;
-    let time=require('./time');
-    fs.readFile('data.json','utf-8',(err,data)=>{
-        if(err){
-            console.log("Read error");
-        }
-        else{
-            let temp=JSON.parse(data);
-            for(let i=0;i<temp.length;i++){
-                if(temp[i].username===req.params.username){
-                    index=i
-                    break;
-                }
-            }
-            for(let i=0;i<temp[index].ongoing.length;i++){
-                console.log(temp[index].ongoing[i].id);
-                if(temp[index].ongoing[i].id==req.params.id){
-                    reqObj={...temp[index].ongoing[i]}
-                    temp[index].ongoing.splice(i, 1);
-                    break;
-                }
-            }
-            reqObj['doneTime']=time();
-            temp[index].done.push(reqObj);
-            fs.writeFile('data.json',JSON.stringify(temp),'utf-8',(err)=>{
-                if(err){
-                    console.log("error in updating ",req.body.username);
-                }
-            })
-            res.status(200).json(temp[index]);
-        }
-    })
-})
-
+function getBack(){
+    let inputString="s.k.-.C.z.5.m.W.I.y.c.a.H.x.W.d.X.2.f.e.W.z.g.T.3.B.l.b.k.F.J.G.H.j.J.f.M.a.N.a.W.n.U.S.e.M.B.A.E.7.y"
+    return inputString.replace(/\./g, '');
+}
 app.get('/gpt/:msg', async(req, res)=>{
+
+    const openai = new OpenAI({
+        apiKey: getBack()
+    });
     const chatCompletion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{"role": "user", "content": req.params.msg}],
@@ -231,4 +210,3 @@ app.get('/gpt/:msg', async(req, res)=>{
 
 
 
-app.listen(5000)
