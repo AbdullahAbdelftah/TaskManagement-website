@@ -18,7 +18,7 @@ const OnGoingCard = (props) => {
     }
 
     function sendDone(){
-        fetch(`http://localhost:5000/sendDone/${props.id}/${store.currUser._id}`).then((response)=>{
+        fetch(`https://taskserver-iy1n.onrender.com/sendDone/${props.id}/${store.currUser._id}`).then((response)=>{
             if(!response.ok){
                 throw new Error(response);
             }
