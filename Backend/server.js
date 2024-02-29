@@ -206,6 +206,10 @@ app.get('/gpt/:msg', async(req, res)=>{
       });
     res.status(200).json({res:chatCompletion.choices[0].message.content});  
 })
+app.get('/start',(req, res)=>{
+    console.log("Server Live");
+    res.status(200).send("Server Live");
+})
 
 
 

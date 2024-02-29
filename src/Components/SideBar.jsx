@@ -5,6 +5,7 @@ const SideBar = () => {
     let store=useContext(Store)
     let [showModal, setShowModal]=useState(false);
     let [takenTime,setTakenTime]=useState(0);
+    let [showLoading,setShowLoading]=useState(false);
     useEffect(() =>{
         let totalTime=0;
         for(let i=0; i<store.currUser.done.length; i++){
@@ -12,6 +13,23 @@ const SideBar = () => {
         }
         setTakenTime(totalTime);
     },[store.currUser])
+    useEffect(()=>{
+        runServer();
+    },[])
+    function runServer(){
+            setShowLoading(true);
+            fetch(`https://taskserver-iy1n.onrender.com/start`).then((response)=>{
+                if(!response.ok){
+                    throw new Error(response);
+                }
+                else{
+                    return response.text();
+                }
+            }).then((data)=>{
+                console.log(data);
+                setShowLoading(false);
+            })
+    }
     function disableModal(){
         setShowModal(false);
     }
@@ -59,6 +77,27 @@ const SideBar = () => {
                     <h5>Average time for completeing task: {Math.round(takenTime/store.currUser.done.length)} mins</h5>
                 </div>
                 <div onClick={disableModal} className='backdrop'>
+
+                </div>
+            </div>}
+            {showLoading && <div className='allmodal'>
+                <div style={{padding:'35px'}} className='modal'>
+                    <div class="spinner center">
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                            <div class="spinner-blade"></div>
+                    </div>
+                </div>
+                <div className='backdrop'>
 
                 </div>
             </div>}

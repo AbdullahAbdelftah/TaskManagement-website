@@ -22,7 +22,24 @@ function App() {
       setLogged(true);
     }
     
-  },[store.currUser])
+  },[store.currUser]);
+  useEffect(()=>{
+    setInterval(()=>{
+      runServer();
+    },180000);
+  },[]);
+  function runServer(){
+    fetch(`https://taskserver-iy1n.onrender.com/start`).then((response)=>{
+        if(!response.ok){
+            throw new Error(response);
+        }
+        else{
+            return response.text();
+        }
+    }).then((data)=>{
+        console.log(data);
+    })
+}
   return (
     <div className="container">
       {!logged&& <Signup/>}
