@@ -81,7 +81,7 @@ const SideBar = () => {
                 </div>
             </div>}
             {showLoading && <div className='allmodal'>
-                <div style={{padding:'35px'}} className='modal'>
+                <div id='loads' style={{padding:'35px'}} className='modal'>
                     <div class="spinner center">
                             <div class="spinner-blade"></div>
                             <div class="spinner-blade"></div>

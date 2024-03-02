@@ -1056,3 +1056,11 @@ label {
     background-color: transparent;
   }
 }
+#loads{
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
+}
